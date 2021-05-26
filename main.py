@@ -6,8 +6,8 @@ from gcsa.recurrence import *
 from functions import convertMonthToNum, convertDaysToList, findDay
 
 # open banweb detail class schedule and calendar
-inputFile = open("G:\\My Drive\\xNot Classes\\Projects\\autoCalendar\\fall21schedule.txt", "r")
-calendar = GoogleCalendar('tjzetty@mtu.edu')
+inputFile = open("class_scehdule_on_drive.txt", "r")  # downloaded webpage as txt file from banweb
+calendar = GoogleCalendar('myemail@business.net') # until published this tool will only work for my email
 
 # initialize variables
 courseName = {}
