@@ -1,5 +1,3 @@
-
-
 """
 GoogleCalendarAutomation.py is a program to automate my Google Calendar. Every semester I create a google calendar
 for my classes and this is usually a long process because I like all of my class info. in one spot. This program
