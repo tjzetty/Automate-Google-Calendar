@@ -69,3 +69,8 @@ def findDay(beginSemester, startClass):
     if ynum > xnum:
         return 7 - (ynum - xnum)
     return xnum - ynum
+
+def removeTBA(text):
+    if text[0] == '<':
+        text = 'TBA'
+    return text
