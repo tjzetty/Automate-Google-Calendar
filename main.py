@@ -1,13 +1,34 @@
+
+
+"""
+GoogleCalendarAutomation.py is a program to automate my Google Calendar. Every semester I create a google calendar
+for my classes and this is usually a long process because I like all of my class info. in one spot. This program
+automates the process and is designed to be adaptable for the future and can accommodate any class as long as the
+Michigan Tech formats remain the same.
+"""
+
+# Generic/Built-in
 import re
-from datetime import datetime, timedelta
+from datetime import timedelta
+
+# Libs
 from gcsa.event import Event
 from gcsa.google_calendar import GoogleCalendar
 from gcsa.recurrence import *
-from functions import convertMonthToNum, convertDaysToList, findDay
+
+# Own modules to assist automation
+from functions import convertMonthToNum, convertDaysToList, findDay, removeTBA
+
+__author__ = "Tyler Zetty"
+__email__ = "tjzetty@mtu.edu"
+__status__ = "First Release"
+
+# {code}
 
 # open banweb detail class schedule and calendar
 inputFile = open("class_scehdule_on_drive.txt", "r")  # downloaded webpage as txt file from banweb
-calendar = GoogleCalendar('myemail@business.net') # until published this tool will only work for my email
+calendar = GoogleCalendar('myemail@business.net')
+calendar.__init__(calendar='calendar ID')  # calendar ID
 
 # initialize variables
 courseName = {}
@@ -43,14 +64,19 @@ for line in inputFile:
     if data > 0:
         if data == 5:
             time[index] = re.findall('<td class="dddefault">(.+)</td>', line)[0]
+            time[index] = removeTBA(time[index])
         if data == 6:
             days[index] = re.findall('<td class="dddefault">(.+)</td>', line)[0]
+            days[index] = removeTBA(days[index])
         if data == 7:
             location[index] = re.findall('<td class="dddefault">(.+)</td>', line)[0]
+            location[index] = removeTBA(location[index])
         if data == 8:
             dateRange[index] = re.findall('<td class="dddefault">(.+)</td>', line)[0]
+            dateRange[index] = removeTBA(dateRange[index])
         if data == 9:
             professor[index] = re.findall('<td class="dddefault">(.+)</td>', line)[0]
+            professor[index] = removeTBA(professor[index])
             data = -1
         data = data + 1
 
@@ -63,6 +89,7 @@ dateEnd = int(re.findall(' (.*?),', endRange)[0])
 yearStart = int(re.findall(', (.*?) - ', dateRange[0])[0])
 yearEnd = int(re.findall(', (.+)', endRange)[0])
 
+# Loop to iterate through each class
 for x in range(0, index+1):
     startTime = 12
     endTime = 12
@@ -71,11 +98,12 @@ for x in range(0, index+1):
     minStart = 0
     minEnd = 0
 
-    paramFindDay = str(dateStart) + ' ' + str(monthStart) + ' ' + str(yearStart)
     # Adjust start date from semester start to real class start
+    paramFindDay = str(dateStart) + ' ' + str(monthStart) + ' ' + str(yearStart)
     adjustDate = findDay(paramFindDay, days[x])
 
-    if time[x][0] != '<':
+    # Calculate times
+    if time[x][0] != 'T':
         # Start Time Calculations: minutes, hours
         startTime = re.findall('(.*) - ', time[x])[0]
         if re.findall(' (.+)', startTime)[0][0] == 'p':
@@ -95,17 +123,38 @@ for x in range(0, index+1):
                 hourEnd = int(re.findall('(.+):', endTime)[0])
                 minEnd = int(re.findall(':(.+) a', endTime)[0])
 
+    # hour corrections due to PM scaling
     if hourEnd == 24:
         hourEnd = 12
     if hourStart == 24:
         hourStart = 12
 
+    # Reformat days list for GCSA
     daysOfWeek = list(convertDaysToList(days[x]).values())
-    event = Event(
-        courseName[x],
-        start=datetime(year=yearStart, month=monthStart, day=dateStart, hour=hourStart, minute=minStart) + timedelta(adjustDate),
-        end=datetime(year=yearStart, month=monthStart, day=dateStart, hour=hourEnd, minute=minEnd) + timedelta(adjustDate),
-        minutes_before_popup_reminder=20,
-        recurrence=Recurrence.rule(freq=WEEKLY, until=date(year=yearEnd, month=monthEnd, day=dateEnd), by_week_day=daysOfWeek)
-    )
+
+    # Create events for all day (online class) and specified time
+    if endTime == startTime:
+        event = Event(
+            courseNumber[x],
+            start=date(year=yearStart, month=monthStart, day=dateStart) + timedelta(adjustDate),
+            end=date(year=yearStart, month=monthStart, day=dateStart) + timedelta(
+                adjustDate),
+            minutes_before_popup_reminder=20,
+            recurrence=Recurrence.rule(freq=WEEKLY, until=date(year=yearEnd, month=monthEnd, day=dateEnd),
+                                       by_week_day=daysOfWeek),
+            location=location[x],
+            description=courseName[x] + '\n' + professor[x]
+        )
+    else:
+        event = Event(
+            courseNumber[x],
+            start=datetime(year=yearStart, month=monthStart, day=dateStart, hour=hourStart, minute=minStart) + timedelta(adjustDate),
+            end=datetime(year=yearStart, month=monthStart, day=dateStart, hour=hourEnd, minute=minEnd) + timedelta(adjustDate),
+            minutes_before_popup_reminder=20,
+            recurrence=Recurrence.rule(freq=WEEKLY, until=date(year=yearEnd, month=monthEnd, day=dateEnd), by_week_day=daysOfWeek),
+            location=location[x],
+            description=courseName[x] + '\n' + professor[x]
+        )
+
+    # Add each event to the calendar!
     calendar.add_event(event)
